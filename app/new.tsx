@@ -8,15 +8,19 @@ import {
   Image,
 } from 'react-native'
 import Icon from '@expo/vector-icons/Feather'
-import { Link } from 'expo-router'
+import { Link, useRouter } from 'expo-router'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
+import * as SecureStore from 'expo-secure-store'
 
 import NLWLogo from '../src/assets/nlw-spacetime-logo.svg'
 import { useState } from 'react'
+import { api } from '../src/lib/api'
 
 export default function NewMemory() {
+  const router = useRouter()
   const { bottom, top } = useSafeAreaInsets()
+
   const [isPublic, setIsPublic] = useState(false)
   const [content, setContent] = useState('')
   const [preview, setPreview] = useState<string | null>(null)
@@ -31,15 +35,40 @@ export default function NewMemory() {
       if (result.assets[0]) {
         setPreview(result.assets[0].uri)
       }
-    } catch (error) {}
-
-    // if (!result.canceled) {
-    //   setImage(result.assets[0].uri)
-    // }
+    } catch (error) {
+      console.log(error)
+    }
   }
 
-  function handleCreateMemory() {
-    console.log(isPublic, content)
+  async function handleCreateMemory() {
+    const token = await SecureStore.getItemAsync('token')
+    let coverUrl = ''
+
+    if (preview) {
+      const uploadFormData = new FormData()
+
+      uploadFormData.append('file', {
+        uri: preview,
+        name: 'image.png',
+        type: 'image/png',
+      } as any)
+
+      const uploadResponse = await api.post('/upload', uploadFormData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      coverUrl = uploadResponse.data.fileUrl
+    }
+
+    await api.post(
+      '/memories',
+      { content, isPublic, coverUrl },
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+
+    router.push('/memories')
   }
 
   return (
