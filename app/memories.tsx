@@ -25,6 +25,7 @@ export default function Memories() {
 
   const [memories, setMemories] = useState<Memory[]>([])
 
+  // eslint-disable-next-line no-unused-vars
   async function signOut() {
     await SecureStore.deleteItemAsync('token')
 
